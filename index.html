@@ -94,8 +94,8 @@
   <div class="ophead mt"><div><b>Saídas por período</b><div class="meta">Unidades entregues por vendedor e cliente, conforme os filtros acima.</div></div><button class="btn" onclick="openFullReport()">Ver relatório completo</button></div>
   <div class="grid g3"><div class="card kpi out"><small>Brindes entregues</small><strong id="dReportOut">—</strong></div><div class="card kpi"><small>Vendedores informados</small><strong id="dSellerCount">—</strong></div><div class="card kpi"><small>Clientes informados</small><strong id="dClientCount">—</strong></div></div>
   <div class="grid g2 mt"><div class="card"><h3>Por vendedor</h3><div id="dSellers" aria-live="polite"><div class="empty">Carregando...</div></div></div><div class="card"><h3>Por cliente</h3><div id="dClients" aria-live="polite"><div class="empty">Carregando...</div></div></div></div>
-  <div class="grid g2 mt"><div class="card"><h3>Estoque por categoria</h3><div id="dashStockCategories" class="metricList"></div></div><div class="card"><h3>Solicitações por status</h3><div id="dashRequestStatus" class="metricList"></div></div></div>
-  <div class="grid g2 mt"><div class="card"><div class="toolbar"><h3>Pedidos pendentes</h3><button class="btn small" onclick="nav(&quot;requests&quot;)">Ver todos</button></div><div id="dashRequestQueue" class="requestRows"></div></div><div class="card"><h3>Estoque crítico</h3><div id="low"></div></div></div>
+  <div class="grid g2 mt"><div class="card"><h3>Estoque por categoria</h3><div id="dashStockCategories" class="metricList"></div></div><div class="card"><h3>Itens solicitados por status</h3><div id="dashRequestStatus" class="metricList"></div></div></div>
+  <div class="grid g2 mt"><div class="card"><div class="toolbar"><h3>Itens pendentes</h3><button class="btn small" onclick="nav(&quot;requests&quot;)">Ver todos</button></div><div id="dashRequestQueue" class="requestRows"></div></div><div class="card"><h3>Estoque crítico</h3><div id="low"></div></div></div>
   <div class="card mt"><h3>Últimas movimentações</h3><div id="recent"></div></div>
  </section>
 
@@ -155,13 +155,14 @@ $$(".close").forEach(function(b){b.onclick=function(){closeM(b)}});$$(".modal").
 async function refresh(){var a=await Promise.all([api("/api/products"),api("/api/movements"),api("/api/requests"),api("/api/sellers"),api("/api/clients"),api("/api/dashboard"),api("/api/categories")]);state.products=a[0];state.movements=a[1];state.requests=a[2];updateRequestAlerts(false);state.sellers=a[3];state.clients=a[4];state.dashboard=a[5];state.categories=a[6];renderAll();$("#dashUpdated").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR");loadDashboardReports();if(!$("#p-reports").classList.contains("hidden"))loadReports()}
 var requestPollBusy=false,knownRequestIds=null;
 function updateRequestAlerts(notify){
- var pending=state.requests.filter(function(r){return r.status==="Pendente"}),fresh=knownRequestIds?state.requests.filter(function(r){return r.status==="Pendente"&&!knownRequestIds.has(r.id)}):[];
+ var pending=state.requests.filter(function(r){return r.status==="Pendente"}),fresh=knownRequestIds?pending.filter(function(r){return !knownRequestIds.has(r.id)}):[];
+ var pendingOrders=new Set(pending.map(function(r){return r.batch_reference||r.id})).size,newOrders=new Set(fresh.map(function(r){return r.batch_reference||r.id})).size;
  knownRequestIds=new Set(state.requests.map(function(r){return r.id}));
- $("#kPending").textContent=pending.length;$$("[data-request-count]").forEach(function(x){x.textContent=pending.length;x.classList.toggle("hidden",pending.length===0)});renderDashboardInsights();
- $("#requestAlert").classList.toggle("hidden",pending.length===0);
- $("#requestAlertText").textContent=pending.length+" solicitação(ões) aguardando sua análise.";
- document.title=pending.length?"("+pending.length+") Solicitações • Somaforce":"Somaforce • Brindes";
- if(notify&&fresh.length)toast(fresh.length+" nova(s) solicitação(ões) recebida(s).","good");
+ $("#kPending").textContent=pendingOrders;$$("[data-request-count]").forEach(function(x){x.textContent=pendingOrders;x.classList.toggle("hidden",pendingOrders===0)});renderDashboardInsights();
+ $("#requestAlert").classList.toggle("hidden",pendingOrders===0);
+ $("#requestAlertText").textContent=pendingOrders+" pedido(s) aguardando sua análise ("+pending.length+" item(ns)).";
+ document.title=pendingOrders?"("+pendingOrders+") Solicitações • Somaforce":"Somaforce • Brindes";
+ if(notify&&newOrders)toast(newOrders+" novo(s) pedido(s) recebido(s).","good");
 }
 async function pollRequests(){
  if(!accessToken||requestPollBusy)return;
@@ -189,7 +190,7 @@ function renderDashboardInsights(){
  var queue=state.requests.filter(function(r){return r.status==="Pendente"&&state.products.some(function(p){return p.id===r.product_id&&dashboardFilterProduct(p)})}).slice(0,5);
  $("#dashRequestQueue").innerHTML=queue.length?queue.map(function(r){return '<div class="requestLine"><div><b>'+esc(r.product_name)+' • '+Number(r.qty)+' un.</b><small>'+esc(r.seller_name||"Vendedor não informado")+' → '+esc(r.client||"Cliente não informado")+(r.city?' • '+esc(r.city):'')+'</small></div><button class="btn small" onclick="nav(&quot;requests&quot;)">Analisar</button></div>'}).join(""):'<div class="empty">Nenhum pedido pendente nesta categoria.</div>';
 }
-function renderDashboard(){renderDashboardInsights();var d=state.dashboard,k=d.kpis;$("#hStock").textContent=k.stock;$("#hIn").textContent=k.month_in;$("#hOut").textContent=k.month_out;$("#kItems").textContent=k.items;$("#kLow").textContent=k.low;$("#kPending").textContent=state.requests.filter(function(r){return r.status==="Pendente"}).length;$("#recent").innerHTML=d.recent.length?'<div class="tablewrap"><table>'+d.recent.map(function(m){return "<tr><td>"+dt(m.created_at)+"</td><td><span class='badge "+(m.type==="Entrada"?"ok":m.type==="Saída"?"danger":"warn")+"'>"+esc(m.type)+"</span></td><td><b>"+esc(m.product_name)+"</b></td><td>"+m.qty+"</td></tr>"}).join("")+"</table></div>":'<div class="empty">Sem movimentações novas.</div>';$("#low").innerHTML=d.low_stock.length?d.low_stock.map(function(p){return "<div style='padding:9px;border:1px solid var(--line);border-radius:11px;margin-bottom:6px'><b>"+esc(p.name)+"</b><div class='meta'>Saldo "+p.stock+" • mínimo "+p.min_stock+"</div></div>"}).join(""):'<div class="empty">Estoque em dia.</div>'}
+function renderDashboard(){renderDashboardInsights();var d=state.dashboard,k=d.kpis;$("#hStock").textContent=k.stock;$("#hIn").textContent=k.month_in;$("#hOut").textContent=k.month_out;$("#kItems").textContent=k.items;$("#kLow").textContent=k.low;$("#kPending").textContent=new Set(state.requests.filter(function(r){return r.status==="Pendente"}).map(function(r){return r.batch_reference||r.id})).size;$("#recent").innerHTML=d.recent.length?'<div class="tablewrap"><table>'+d.recent.map(function(m){return "<tr><td>"+dt(m.created_at)+"</td><td><span class='badge "+(m.type==="Entrada"?"ok":m.type==="Saída"?"danger":"warn")+"'>"+esc(m.type)+"</span></td><td><b>"+esc(m.product_name)+"</b></td><td>"+m.qty+"</td></tr>"}).join("")+"</table></div>":'<div class="empty">Sem movimentações novas.</div>';$("#low").innerHTML=d.low_stock.length?d.low_stock.map(function(p){return "<div style='padding:9px;border:1px solid var(--line);border-radius:11px;margin-bottom:6px'><b>"+esc(p.name)+"</b><div class='meta'>Saldo "+p.stock+" • mínimo "+p.min_stock+"</div></div>"}).join(""):'<div class="empty">Estoque em dia.</div>'}
 function pstatus(p){if(p.stock<=0)return["Sem estoque","danger"];if(p.stock<=p.min_stock)return["Baixo","warn"];return["OK","ok"]}
 var categoryFromProduct=false;
 function openCategory(fromProduct){categoryFromProduct=!!fromProduct;$("#fCategory").reset();openM("mCategory");$("#categoryName").focus()}
