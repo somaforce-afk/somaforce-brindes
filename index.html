@@ -9,7 +9,7 @@
 :root{--bg:#f3f5f8;--panel:#fff;--panel2:#f7f8fa;--text:#151922;--muted:#707989;--line:#e3e7ed;--red:#c92832;--red2:#e34a52;--green:#16824b;--amber:#ad6b0a;--blue:#2f6fc2;--dark:#1b222d;--shadow:0 12px 30px rgba(20,28,40,.07)}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}button,input,select,textarea{font:inherit}.hidden{display:none!important}
 .shell{display:grid;grid-template-columns:242px 1fr;min-height:100vh}.side{background:linear-gradient(180deg,#151a22,#202936);color:#fff;padding:18px 13px;position:sticky;top:0;height:100vh;overflow:auto}
-.brand{background:#fff;color:#c92832;border-radius:14px;padding:12px;text-align:center;margin-bottom:10px}.brand b{font-size:23px;letter-spacing:.03em}.brand small{display:block;color:#333;font-size:9px;letter-spacing:.16em;margin-top:2px}
+.brand{background:#fff;border-radius:14px;padding:12px;margin-bottom:10px}.brand img{display:block;width:100%;height:auto}
 .sidecap{text-align:center;color:#98a5b6;font-size:9px;letter-spacing:.13em;margin:10px 0 18px}.section{font-size:9px;color:#778497;text-transform:uppercase;letter-spacing:.14em;margin:16px 10px 6px;font-weight:900}
 .nav{display:flex;flex-direction:column;gap:5px}.nav button{border:0;background:transparent;color:#cbd4e0;text-align:left;padding:11px 12px;border-radius:12px;font-weight:750;cursor:pointer}.nav button:hover,.nav button.active{background:rgba(201,40,50,.22);color:#fff}.nav .in.active{background:rgba(22,130,75,.28)}.nav .out.active{background:rgba(201,40,50,.30)}.nav .adj.active{background:rgba(173,107,10,.30)}
 .sidefoot{border-top:1px solid rgba(255,255,255,.09);padding:12px 8px 0;margin-top:18px;color:#aab4c2;font-size:11px}.main{padding:18px 22px 40px;min-width:0}
@@ -24,12 +24,14 @@
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:14px;max-height:560px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;z-index:1}tbody tr:hover{background:#fffafa}
 .note{border:1px solid var(--line);border-left:3px solid var(--blue);background:var(--panel2);border-radius:12px;padding:10px;color:var(--muted);font-size:11px;line-height:1.45}.ophead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 13px;margin-bottom:11px}.ophead b{font-size:14px}.ophead .meta{font-size:10.5px}
 .modal{display:none;position:fixed;inset:0;background:rgba(9,14,22,.57);z-index:100;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(5px)}.modal.show{display:flex}.box{background:var(--panel);border-radius:20px;padding:18px;width:min(760px,100%);max-height:92vh;overflow:auto}.box h3{margin-top:0}.form{display:grid;grid-template-columns:1fr 1fr;gap:9px}.fg{display:flex;flex-direction:column;gap:5px}.fg.full{grid-column:1/-1}.fg label{font-size:10.5px;color:var(--muted);font-weight:850}.foot{display:flex;justify-content:flex-end;gap:7px;margin-top:12px}.preview{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:10px;font-size:12px}.toast{display:none;position:fixed;right:16px;bottom:16px;z-index:200;background:#1c222c;color:#fff;border-radius:11px;padding:11px 14px;max-width:340px}.toast.show{display:block}.toast.err{background:#a9222a}.toast.good{background:#167847}.empty{text-align:center;color:var(--muted);padding:22px}
-.mobile{display:none}
+.mobile{display:none}.mobileLogo{display:none}
 @media(max-width:1200px){.g6{grid-template-columns:repeat(3,1fr)}.products{grid-template-columns:repeat(2,1fr)}}@media(max-width:900px){.shell{display:block}.side{display:none}.main{padding:12px 11px 70px}.hero,.g2{grid-template-columns:1fr}.quick{grid-template-columns:1fr}.products{grid-template-columns:1fr}.mobile{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:5px}.mobile button{border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:900;padding:7px}.mobile button.active{color:var(--red)}}@media(max-width:600px){.g6,.g4,.g3,.form,.heroK{grid-template-columns:1fr}.field{min-width:100%}.top h1{font-size:19px}}
 
 .loginGate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 12% 0%,rgba(201,40,50,.16),transparent 27%),linear-gradient(180deg,#f6f8fb,#edf1f6)}
 .loginGate.hidden{display:none!important}.loginCard{width:min(440px,100%);background:#fff;border:1px solid #e3e8ef;border-radius:25px;padding:25px;box-shadow:0 30px 80px rgba(20,28,40,.13);color:#171a22}
 .loginBrand{text-align:center;margin-bottom:20px}.loginBrand b{display:block;color:#c92832;font-size:28px;letter-spacing:.035em}.loginBrand small{display:block;color:#4a4f58;font-size:10px;letter-spacing:.19em;margin-top:2px}
+.loginBrand img{display:block;width:min(100%,340px);height:auto;margin:0 auto}
+@media(max-width:900px){.mobileLogo{display:block;width:150px;height:auto;margin-bottom:5px}}
 .loginCard h1{text-align:center;font-size:22px;margin:0 0 7px}.loginCard p{text-align:center;color:#707989;font-size:13px;line-height:1.45;margin:0 0 18px}
 .loginCard label{display:block;font-size:11px;font-weight:850;color:#697281;margin-bottom:6px}.loginCard input{width:100%;border:1px solid #dfe5ec;border-radius:12px;padding:12px 13px;font-size:16px;outline:none}
 .loginCard input:focus{border-color:#d25a61;box-shadow:0 0 0 3px rgba(201,40,50,.08)}.loginCard button{width:100%;margin-top:12px;border:0;border-radius:12px;padding:12px;background:linear-gradient(135deg,#c92832,#e34a52);color:#fff;font-weight:850;cursor:pointer}
@@ -42,7 +44,7 @@
 
 <div id="loginGate" class="loginGate">
  <div class="loginCard">
-  <div class="loginBrand"><b>SOMAFORCE</b><small>DISTRIBUIDORA</small></div>
+  <div class="loginBrand"><img src="./logo.png" alt="Somaforce Distribuidora" width="1989" height="445"></div>
   <h1>Controle de Brindes</h1>
   <p>Digite a senha de acesso para entrar no sistema.</p>
   <label for="accessPassword">Senha</label>
@@ -55,7 +57,7 @@
 
 <div id="appShell" class="shell hidden">
 <aside class="side">
- <div class="brand"><b>SOMAFORCE</b><small>DISTRIBUIDORA</small></div>
+ <div class="brand"><img src="./logo.png" alt="Somaforce Distribuidora" width="1989" height="445"></div>
  <div class="sidecap">GESTÃO DE BRINDES • CLOUD</div>
  <nav class="nav">
   <div class="section">Visão geral</div>
@@ -76,7 +78,7 @@
  <div class="sidefoot">● Online<br>Online • protegido</div>
 </aside>
 <main class="main">
- <header class="top"><div><h1 id="title">Dashboard</h1><div class="sub" id="subtitle">Visão geral do inventário e das operações.</div></div><div class="chip"><span class="dot"></span>Acesso protegido • senha <button class="btn small" onclick="logoutApp()" style="margin-left:7px">Sair</button></div></header>
+ <header class="top"><div><img class="mobileLogo" src="./logo.png" alt="Somaforce Distribuidora" width="1989" height="445"><h1 id="title">Dashboard</h1><div class="sub" id="subtitle">Visão geral do inventário e das operações.</div></div><div class="chip"><span class="dot"></span>Acesso protegido • senha <button class="btn small" onclick="logoutApp()" style="margin-left:7px">Sair</button></div></header>
 
  <section id="p-dashboard" class="page">
   <div class="hero"><div><h2>Controle de brindes da Somaforce.</h2><p>Entradas, saídas, solicitações, vendedores e clientes em um único lugar. Banco hospedado na nuvem com atualização centralizada.</p></div><div class="heroK"><div><small>Saldo atual</small><b id="hStock">0</b></div><div><small>Entradas mês</small><b id="hIn">0</b></div><div><small>Saídas mês</small><b id="hOut">0</b></div></div></div>
