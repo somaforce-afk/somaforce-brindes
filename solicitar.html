@@ -5,13 +5,13 @@
 </style></head><body><main><header><img src="./logo.png" alt="Somaforce Distribuidora"><h1>Solicitar brinde</h1><p>Preencha o pedido para nossa equipe analisar.</p></header>
 <section class="card" id="formCard"><p id="catalogState" role="status">Carregando brindes…</p><button id="retry" class="hidden" type="button">Tentar novamente</button>
 <form id="requestForm" novalidate><div class="grid">
-<div class="full"><label for="seller">Vendedor cadastrado <span class="optional">opcional</span></label><select id="seller" disabled><option value="">Carregando vendedores…</option></select></div>
+<div class="full"><label for="seller">Seu nome / vendedor</label><select id="seller" disabled><option value="">Carregando vendedores…</option></select><div id="otherSellerRow" class="hidden" style="margin-top:10px"><label for="otherSeller">Digite seu nome</label><input id="otherSeller" maxlength="120" autocomplete="name" placeholder="Nome do vendedor"></div></div>
 <div><label for="client">Nome do cliente</label><input id="client" maxlength="160" placeholder="Cliente ou empresa"></div>
 <div><label for="city">Cidade</label><input id="city" maxlength="120" placeholder="Ex.: Araranguá / SC"></div>
 
 <div><label for="product">Brinde</label><select id="product" disabled><option value="">Carregando…</option></select></div>
 <div><label for="qty">Quantidade</label><input id="qty" type="number" inputmode="numeric" min="1" max="1000" value="1"></div>
-<div class="full"><button id="addItem" type="button" class="add" disabled>+ Adicionar item</button><p id="cartSummary" role="status">Nenhum item adicionado.</p><div id="cart"></div></div><div class="full"><label for="note">Observação <span class="optional">opcional</span></label><textarea id="note" maxlength="1000" placeholder="Conte algo que ajude a analisar o pedido"></textarea></div>
+<div class="full"><button id="addItem" type="button" class="add" disabled>+ Adicionar item</button><p id="cartSummary" role="status">Nenhum item adicionado.</p><p id="limitHint" class="hint" style="margin-top:5px"></p><div id="cart"></div></div><div class="full"><label for="note">Observação <span class="optional">opcional</span></label><textarea id="note" maxlength="1000" placeholder="Conte algo que ajude a analisar o pedido"></textarea></div>
 </div><div class="trap" aria-hidden="true"><label for="website">Site</label><input id="website" tabindex="-1" autocomplete="off"></div>
 <p class="hint">A entrega depende da aprovação e da disponibilidade. O envio não reserva nem retira brindes do estoque.</p>
 <p id="error" class="error hidden" role="alert"></p><button id="send" class="submit" disabled>Enviar solicitação</button></form></section>
@@ -20,7 +20,7 @@
 <script>
 const BASE="https://tdbmosdmepkfzmcxucqi.supabase.co/functions/v1/somaforce-brindes";
 const $=id=>document.getElementById(id);
-let products=[],sellers=[],cart=[],submissionId=crypto.randomUUID(),sending=false;
+let products=[],sellers=[],cart=[],limits={max_types:20,max_units:20000},submissionId=crypto.randomUUID(),sending=false;
 function error(message){$("error").textContent=message;$("error").classList.toggle("hidden",!message)}
 function drawProducts(){
  const old=$("product").value;
@@ -35,17 +35,20 @@ function drawProducts(){
  $("catalogState").textContent=products.length?"Escolha os brindes, informe as quantidades e adicione à lista.":"Nenhum brinde disponível no momento.";
 }
 function drawSellers(){
- const old=$("seller").value;$("seller").replaceChildren(new Option("Selecione seu nome (opcional)",""));
- sellers.forEach(s=>$("seller").add(new Option(s.name,s.id)));$("seller").value=old;
+ const old=$("seller").value;$("seller").replaceChildren(new Option("Selecione um vendedor ou digite seu nome",""));
+ sellers.forEach(s=>$("seller").add(new Option(s.name,s.id)));$("seller").add(new Option("Outro vendedor — digitar nome","__custom__"));$("seller").value=old;toggleOtherSeller();
 }
+function toggleOtherSeller(){$("otherSellerRow").classList.toggle("hidden",$("seller").value!=="__custom__");if($("seller").value==="__custom__")$("otherSeller").focus()}
+$("seller").onchange=toggleOtherSeller;
+function updateLimitHint(){$("limitHint").textContent="Limite definido pela equipe: até "+limits.max_types+" tipo(s) e "+limits.max_units+" unidade(s) por pedido."}
 async function loadCatalog(){
  $("retry").classList.add("hidden");
  try{
- const responses=await Promise.all([fetch(BASE+"/api/public/products"),fetch(BASE+"/api/public/sellers")]);
+ const responses=await Promise.all([fetch(BASE+"/api/public/products"),fetch(BASE+"/api/public/sellers"),fetch(BASE+"/api/public/limits")]);
  if(responses.some(r=>!r.ok))throw Error("Não foi possível carregar os cadastros.");
- [products,sellers]=await Promise.all(responses.map(r=>r.json()));
+ [products,sellers,limits]=await Promise.all(responses.map(r=>r.json()));updateLimitHint();
  drawProducts();drawSellers();
- $("product").disabled=!products.length;$("seller").disabled=!sellers.length;
+ $("product").disabled=!products.length;$("seller").disabled=false;
  $("send").disabled=!products.length;$("addItem").disabled=!products.length;
  }catch(e){$("catalogState").textContent="Não foi possível carregar os brindes e vendedores. Tente novamente.";$("retry").classList.remove("hidden")}
 }
@@ -56,7 +59,7 @@ function drawCart(){
  const row=document.createElement("div");row.className="cartItem";
  const name=document.createElement("span");name.textContent=item.name;
  const qty=document.createElement("input");qty.type="number";qty.min="1";qty.max="1000";qty.value=item.qty;qty.setAttribute("aria-label","Quantidade de "+item.name);
- qty.onchange=()=>{const value=Number(qty.value);if(!Number.isInteger(value)||value<1||value>1000){error("Informe uma quantidade entre 1 e 1000.");qty.value=item.qty;return}item.qty=value;drawCart()};
+ qty.onchange=()=>{const value=Number(qty.value);if(!Number.isInteger(value)||value<1||value>1000||cart.reduce((n,i)=>n+i.qty,0)-item.qty+value>limits.max_units){error("Quantidade inválida ou acima do limite total de "+limits.max_units+" unidades.");qty.value=item.qty;return}item.qty=value;error("");drawCart()};
  const remove=document.createElement("button");remove.type="button";remove.textContent="Remover";remove.setAttribute("aria-label","Remover "+item.name);remove.onclick=()=>{cart.splice(index,1);drawCart()};
  row.append(name,qty,remove);$("cart").append(row);
  });
@@ -67,8 +70,9 @@ function addItem(){
  if(!product){error("Selecione o brinde que deseja adicionar.");$("product").focus();return false}
  if(!Number.isInteger(qty)||qty<1||qty>1000){error("Informe uma quantidade entre 1 e 1000.");$("qty").focus();return false}
  const existing=cart.find(i=>i.product_id===product.id);
+ if(cart.reduce((n,i)=>n+i.qty,0)+qty>limits.max_units){error("Limite de "+limits.max_units+" unidades por pedido.");return false}
  if(existing){if(existing.qty+qty>1000){error("O limite é de 1000 unidades por brinde.");return false}existing.qty+=qty}
- else{if(cart.length>=20){error("Você pode incluir até 20 brindes por solicitação.");return false}cart.push({product_id:product.id,name:product.name,qty})}
+ else{if(cart.length>=limits.max_types){error("Limite de "+limits.max_types+" tipos de brinde por pedido.");return false}cart.push({product_id:product.id,name:product.name,qty})}
  drawProducts();$("product").value="";$("qty").value="1";drawCart();return true;
 }
 $("addItem").onclick=addItem;
@@ -76,20 +80,21 @@ $("requestForm").onsubmit=async e=>{
  e.preventDefault();if(sending)return;error("");
  if($("product").value&&!addItem())return;
  if(!cart.length){error("Adicione pelo menos um brinde à solicitação.");$("product").focus();return}
+ if($("seller").value==="__custom__"&&!$("otherSeller").value.trim()){error("Digite o nome do vendedor ou escolha um cadastro.");$("otherSeller").focus();return}
  const sentItems=cart.map(i=>({...i}));
- const payload={submission_id:submissionId,items:sentItems.map(i=>({product_id:i.product_id,qty:i.qty})),seller_id:$("seller").value||null,client_name:$("client").value.trim(),city:$("city").value.trim(),note:$("note").value.trim(),website:$("website").value};
+ const payload={submission_id:submissionId,items:sentItems.map(i=>({product_id:i.product_id,qty:i.qty})),seller_id:!["","__custom__"].includes($("seller").value)?$("seller").value:null,seller_name:$("seller").value==="__custom__"?$("otherSeller").value.trim():"",client_name:$("client").value.trim(),city:$("city").value.trim(),note:$("note").value.trim(),website:$("website").value};
  sending=true;const controls=[...$("requestForm").querySelectorAll("input,select,textarea,button")];controls.forEach(c=>c.disabled=true);$("send").textContent="Enviando…";
  try{
  const r=await fetch(BASE+"/api/public/requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
  const data=await r.json();if(!r.ok)throw Error(data.error||"Não foi possível enviar. Tente novamente.");
  $("receipt").textContent="Protocolo #"+data.id+" • "+sentItems.length+" tipo(s) de brinde • "+sentItems.reduce((n,i)=>n+i.qty,0)+" unidade(s).";
- const sellerName=sellers.find(s=>String(s.id)===String(payload.seller_id))?.name||"Não informado";
+ const sellerName=sellers.find(s=>String(s.id)===String(payload.seller_id))?.name||payload.seller_name||"Não informado";
  const message=["Olá! Nova solicitação de brindes Somaforce.","Protocolo: #"+data.id,"Vendedor: "+sellerName,"Cliente: "+(payload.client_name||"Não informado"),"Cidade: "+(payload.city||"Não informada"),"Itens:",...sentItems.map(i=>"• "+i.qty+" × "+i.name),"Status: aguardando aprovação.","Consultar no sistema: https://somaforce-afk.github.io/somaforce-brindes/"].join("\n");
  $("whatsapp").href="https://wa.me/5548996670598?text="+encodeURIComponent(message);
  $("formCard").classList.add("hidden");$("success").classList.remove("hidden");$("success").focus();
  }catch(e){error(e.message||"Falha de conexão. Tente novamente; seu pedido não será duplicado.")}
  finally{sending=false;controls.forEach(c=>c.disabled=false);$("send").textContent="Enviar solicitação"}
 };
-$("another").onclick=()=>{const seller=$("seller").value;$("requestForm").reset();$("seller").value=seller;cart=[];drawCart();submissionId=crypto.randomUUID();drawProducts();error("");$("success").classList.add("hidden");$("formCard").classList.remove("hidden");$("client").focus()};
+$("another").onclick=()=>{const seller=$("seller").value,otherSeller=$("otherSeller").value;$("requestForm").reset();$("seller").value=seller;$("otherSeller").value=otherSeller;toggleOtherSeller();cart=[];drawCart();submissionId=crypto.randomUUID();drawProducts();error("");$("success").classList.add("hidden");$("formCard").classList.remove("hidden");$("client").focus()};
 loadCatalog();
 </script></body></html>
