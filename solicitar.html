@@ -7,7 +7,7 @@ body{background:#f5f6f8;color:#22252b;line-height:1.5}main{max-width:720px;margi
 </style></head><body><main><header><img src="./logo.png" alt="Somaforce Distribuidora"><h1>Solicitar brinde</h1><p>Preencha o pedido para nossa equipe analisar.</p></header>
 <section class="card" id="formCard"><p id="catalogState" role="status">Carregando brindes…</p><button id="retry" class="hidden" type="button">Tentar novamente</button>
 <form id="requestForm" novalidate><div class="grid">
-<div class="full"><label for="seller">Seu nome / vendedor</label><select id="seller" disabled><option value="">Carregando vendedores…</option></select><div id="otherSellerRow" class="hidden" style="margin-top:10px"><label for="otherSeller">Digite seu nome</label><input id="otherSeller" maxlength="120" autocomplete="name" placeholder="Nome do vendedor"></div></div>
+<div class="full"><label for="seller">Seu nome / vendedor</label><select id="seller" disabled><option value="">Carregando vendedores…</option></select></div>
 <div><label for="clientCode">Cód. do cliente</label><input id="clientCode" maxlength="80" placeholder="Código do cliente"></div>
 <div><label for="client">Nome do cliente</label><input id="client" maxlength="160" placeholder="Cliente ou empresa"></div>
 
@@ -38,11 +38,9 @@ function drawProducts(){
  $("catalogState").textContent=products.length?"Escolha os brindes, informe as quantidades e adicione à lista.":"Nenhum brinde disponível no momento.";
 }
 function drawSellers(){
- const old=$("seller").value;$("seller").replaceChildren(new Option("Selecione um vendedor ou digite seu nome",""));
- sellers.forEach(s=>$("seller").add(new Option(s.name,s.id)));$("seller").add(new Option("Outro vendedor — digitar nome","__custom__"));$("seller").value=old;toggleOtherSeller();
+ const old=$("seller").value;$("seller").replaceChildren(new Option("Selecione um vendedor",""));
+ sellers.forEach(s=>$("seller").add(new Option(s.name,s.id)));$("seller").value=old;
 }
-function toggleOtherSeller(){$("otherSellerRow").classList.toggle("hidden",$("seller").value!=="__custom__");if($("seller").value==="__custom__")$("otherSeller").focus()}
-$("seller").onchange=toggleOtherSeller;
 function updateLimitHint(){$("limitHint").textContent="Limite definido pela equipe: até "+limits.max_types+" tipo(s) e "+limits.max_units+" unidade(s) por pedido."}
 async function loadCatalog(){
  $("retry").classList.add("hidden");
@@ -83,21 +81,20 @@ $("requestForm").onsubmit=async e=>{
  e.preventDefault();if(sending)return;error("");
  if($("product").value&&!addItem())return;
  if(!cart.length){error("Adicione pelo menos um brinde à solicitação.");$("product").focus();return}
- if($("seller").value==="__custom__"&&!$("otherSeller").value.trim()){error("Digite o nome do vendedor ou escolha um cadastro.");$("otherSeller").focus();return}
  const sentItems=cart.map(i=>({...i}));
- const payload={submission_id:submissionId,items:sentItems.map(i=>({product_id:i.product_id,qty:i.qty})),seller_id:!["","__custom__"].includes($("seller").value)?$("seller").value:null,seller_name:$("seller").value==="__custom__"?$("otherSeller").value.trim():"",client_name:$("client").value.trim(),client_code:$("clientCode").value.trim(),note:$("note").value.trim(),website:$("website").value};
+ const payload={submission_id:submissionId,items:sentItems.map(i=>({product_id:i.product_id,qty:i.qty})),seller_id:$("seller").value||null,client_name:$("client").value.trim(),client_code:$("clientCode").value.trim(),note:$("note").value.trim(),website:$("website").value};
  sending=true;const controls=[...$("requestForm").querySelectorAll("input,select,textarea,button")];controls.forEach(c=>c.disabled=true);$("send").textContent="Enviando…";
  try{
  const r=await fetch(BASE+"/api/public/requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
  const data=await r.json();if(!r.ok)throw Error(data.error||"Não foi possível enviar. Tente novamente.");
  $("receipt").textContent="Protocolo #"+data.id+" • "+sentItems.length+" tipo(s) de brinde • "+sentItems.reduce((n,i)=>n+i.qty,0)+" unidade(s).";
- const sellerName=sellers.find(s=>String(s.id)===String(payload.seller_id))?.name||payload.seller_name||"Não informado";
+ const sellerName=sellers.find(s=>String(s.id)===String(payload.seller_id))?.name||"Não informado";
  const message=["Olá! Nova solicitação de brindes Somaforce.","Protocolo: #"+data.id,"Vendedor: "+sellerName,"Cód. do cliente: "+(payload.client_code||"Não informado"),"Cliente: "+(payload.client_name||"Não informado"),"Itens:",...sentItems.map(i=>"• "+i.qty+" × "+i.name),"Status: aguardando aprovação."].join("\n");
  $("whatsapp").href="https://wa.me/5548996670598?text="+encodeURIComponent(message);
  $("formCard").classList.add("hidden");$("success").classList.remove("hidden");$("success").focus();
  }catch(e){error(e.message||"Falha de conexão. Tente novamente; seu pedido não será duplicado.")}
  finally{sending=false;controls.forEach(c=>c.disabled=false);$("send").textContent="Enviar solicitação"}
 };
-$("another").onclick=()=>{const seller=$("seller").value,otherSeller=$("otherSeller").value;$("requestForm").reset();$("seller").value=seller;$("otherSeller").value=otherSeller;toggleOtherSeller();cart=[];drawCart();submissionId=crypto.randomUUID();drawProducts();error("");$("success").classList.add("hidden");$("formCard").classList.remove("hidden");$("client").focus()};
+$("another").onclick=()=>{const seller=$("seller").value;$("requestForm").reset();$("seller").value=seller;cart=[];drawCart();submissionId=crypto.randomUUID();drawProducts();error("");$("success").classList.add("hidden");$("formCard").classList.remove("hidden");$("client").focus()};
 loadCatalog();
 </script></body></html>
