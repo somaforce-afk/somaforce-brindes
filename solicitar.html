@@ -89,7 +89,7 @@ $("requestForm").onsubmit=async e=>{
  const data=await r.json();if(!r.ok)throw Error(data.error||"Não foi possível enviar. Tente novamente.");
  $("receipt").textContent="Protocolo #"+data.id+" • "+sentItems.length+" tipo(s) de brinde • "+sentItems.reduce((n,i)=>n+i.qty,0)+" unidade(s).";
  const sellerName=sellers.find(s=>String(s.id)===String(payload.seller_id))?.name||payload.seller_name||"Não informado";
- const message=["Olá! Nova solicitação de brindes Somaforce.","Protocolo: #"+data.id,"Vendedor: "+sellerName,"Cliente: "+(payload.client_name||"Não informado"),"Cidade: "+(payload.city||"Não informada"),"Itens:",...sentItems.map(i=>"• "+i.qty+" × "+i.name),"Status: aguardando aprovação.","Consultar no sistema: https://somaforce-afk.github.io/somaforce-brindes/"].join("\n");
+ const message=["Olá! Nova solicitação de brindes Somaforce.","Protocolo: #"+data.id,"Vendedor: "+sellerName,"Cliente: "+(payload.client_name||"Não informado"),"Cidade: "+(payload.city||"Não informada"),"Itens:",...sentItems.map(i=>"• "+i.qty+" × "+i.name),"Status: aguardando aprovação."].join("\n");
  $("whatsapp").href="https://wa.me/5548996670598?text="+encodeURIComponent(message);
  $("formCard").classList.add("hidden");$("success").classList.remove("hidden");$("success").focus();
  }catch(e){error(e.message||"Falha de conexão. Tente novamente; seu pedido não será duplicado.")}
