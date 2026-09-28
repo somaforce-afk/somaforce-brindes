@@ -530,3 +530,16 @@ document.getElementById("accessPassword").addEventListener("keydown",e=>{if(e.ke
 })();
 </script>
 </body></html>
+<script>
+(function(){
+ const holder=document.createElement('div'); holder.className='fg full';
+ holder.innerHTML='<div id="xExtraItems"></div><button type="button" class="btn small" id="addExitItem">+ Adicionar outro brinde</button>';
+ document.querySelector('#xPreview').parentNode.after(holder);
+ function items(){return [{product_id:$('#xProduct').value,qty:$('#xQty').value}].concat($$('#xExtraItems .exitItem').map(row=>({product_id:row.querySelector('select').value,qty:row.querySelector('input').value})))}
+ const oldPreview=preview;
+ preview=function(){oldPreview();let sums={};items().forEach(it=>{let q=Number(it.qty);if(it.product_id&&Number.isInteger(q)&&q>0)sums[it.product_id]=(sums[it.product_id]||0)+q});let lines=Object.keys(sums).map(id=>{let p=state.products.find(x=>String(x.id)===id);return p?esc(p.name)+': '+sums[id]+' un. → saldo '+(p.stock-sums[id])+(sums[id]>p.stock?' (insuficiente)':''):''});if(lines.length)$('#xPreview').innerHTML=lines.join('<br>')};
+ $('#addExitItem').onclick=function(){let row=document.createElement('div');row.className='exitItem';row.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) 100px auto;gap:8px;align-items:end;margin:10px 0';row.innerHTML='<div class="fg"><label>Outro brinde</label><select aria-label="Outro brinde"><option value="">Selecione...</option>'+state.products.filter(p=>p.active!==false&&p.stock>0).map(p=>'<option value="'+p.id+'">'+esc(p.name)+' — saldo '+p.stock+'</option>').join('')+'</select></div><div class="fg"><label>Quantidade</label><input class="field" type="number" min="1" step="1" value="1" aria-label="Quantidade do outro brinde"></div><button type="button" class="btn small" aria-label="Remover brinde">×</button>';$('#xExtraItems').appendChild(row);row.querySelector('button').onclick=()=>{row.remove();preview()};row.oninput=preview;row.onchange=preview;row.querySelector('select').focus();preview()};
+ const oldOpen=openExit;openExit=function(){$('#xExtraItems').innerHTML='';oldOpen()};
+ $('#saveExit').onclick=async function(){let list=items(),used={},total=0;if(list.length>30){toast('Limite de 30 linhas por saída.','err');return}for(let i=0;i<list.length;i++){let it=list[i],p=state.products.find(x=>String(x.id)===String(it.product_id)),q=Number(it.qty);if(!p||!Number.isInteger(q)||q<=0){toast('Confira o item '+(i+1)+'.','err');return}used[p.id]=(used[p.id]||0)+q;total+=q}for(let id in used){let p=state.products.find(x=>String(x.id)===id);if(used[id]>p.stock){toast('Estoque insuficiente para '+p.name+'. Disponível: '+p.stock,'err');return}}let button=this;button.disabled=true;try{let r=await api('/api/movements/batch',{method:'POST',body:{items:list,seller_id:$('#xSeller').value||null,client_id:$('#xClient').value||null,reason:$('#xReason').value,note:$('#xNote').value}});$('#mExit').classList.remove('show');toast(r.item_count+' brinde(s), '+total+' unidade(s) registrados.','good');await refresh()}catch(e){toast(e.message,'err')}finally{button.disabled=false}};
+})();
+</script>
