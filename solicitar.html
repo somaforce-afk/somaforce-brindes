@@ -8,8 +8,21 @@ body{background:#f5f6f8;color:#22252b;line-height:1.5}main{max-width:720px;margi
 <section class="card" id="formCard"><p id="catalogState" role="status">Carregando brindes…</p><button id="retry" class="hidden" type="button">Tentar novamente</button>
 <form id="requestForm" novalidate><div class="grid">
 <div class="full"><label for="seller">Vendedor</label><select id="seller" required disabled><option value="">Carregando vendedores…</option></select></div>
-<div><label for="clientCode">Cód. do cliente</label><input id="clientCode" required maxlength="80" placeholder="Código do cliente"></div>
-<div><label for="client">Cliente</label><input id="client" required maxlength="160" placeholder="Cliente ou empresa"></div>
+<div class="full" id="clientPicker">
+<label for="clientSearch">Cliente</label>
+<input id="clientSearch" type="search" placeholder="Buscar por código ou nome" autocomplete="off" disabled>
+<select id="clientSelect" aria-label="Escolher cliente cadastrado" required disabled style="margin-top:10px"><option value="">Carregando clientes…</option></select>
+<p id="clientState" class="hint" role="status" style="margin-top:8px">Carregando clientes cadastrados…</p>
+<button id="retryClients" type="button" class="add hidden">Tentar carregar clientes novamente</button>
+<button id="newClient" type="button" class="add" style="margin-top:12px" aria-expanded="false" aria-controls="newClientForm">+ Cadastrar cliente</button>
+<div id="newClientForm" class="hidden" style="margin-top:18px;padding-top:18px;border-top:1px solid #e5e7eb">
+<p class="hint" style="margin:0 0 12px">Cadastre somente se o cliente ainda não estiver na lista.</p>
+<div class="grid"><div><label for="newClientCode">Cód. do cliente</label><input id="newClientCode" maxlength="80" autocomplete="off"></div><div><label for="newClientName">Nome do cliente</label><input id="newClientName" maxlength="160" autocomplete="organization"></div></div>
+<p id="clientError" class="error hidden" role="alert"></p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button id="saveClient" type="button">Salvar cliente</button><button id="cancelClient" class="add" style="width:auto" type="button">Cancelar</button></div>
+</div>
+<input id="clientCode" type="hidden"><input id="client" type="hidden">
+</div>
 
 
 <div><label for="product">Brinde</label><select id="product" disabled><option value="">Carregando…</option></select></div>
@@ -85,7 +98,7 @@ $("requestForm").onsubmit=async e=>{
  if($("product").value&&!addItem())return;
  if(!cart.length){error("Adicione pelo menos um brinde à solicitação.");$("product").focus();return}
  const sentItems=cart.map(i=>({...i}));
- const payload={submission_id:submissionId,items:sentItems.map(i=>({product_id:i.product_id,qty:i.qty})),seller_id:$("seller").value||null,client_name:$("client").value.trim(),client_code:$("clientCode").value.trim(),note:$("note").value.trim(),website:$("website").value};
+ const payload={submission_id:submissionId,items:sentItems.map(i=>({product_id:i.product_id,qty:i.qty})),seller_id:$("seller").value||null,client_id:selectedClient?.id||null,client_name:$("client").value.trim(),client_code:$("clientCode").value.trim(),note:$("note").value.trim(),website:$("website").value};
  sending=true;const controls=[...$("requestForm").querySelectorAll("input,select,textarea,button")];controls.forEach(c=>c.disabled=true);$("send").textContent="Enviando…";
  try{
  const r=await fetch(BASE+"/api/public/requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -100,4 +113,63 @@ $("requestForm").onsubmit=async e=>{
 };
 $("another").onclick=()=>{const seller=$("seller").value;$("requestForm").reset();$("seller").value=seller;cart=[];drawCart();submissionId=crypto.randomUUID();drawProducts();error("");$("success").classList.add("hidden");$("formCard").classList.remove("hidden");$("client").focus()};
 loadCatalog();
+
+// Clientes do formulário de vendedores
+let clients=[],selectedClient=null,clientSaving=false;
+const normalizeClient=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR").trim();
+function clientMessage(message,isError=false){$("clientError").textContent=message;$("clientError").classList.toggle("hidden",!message);$("clientError").style.color=isError?"#ad202b":"#24734d"}
+function chooseClient(client){
+ selectedClient=client;$("clientCode").value=client?client.code:"";$("client").value=client?client.name:"";
+ if(client){$("clientSearch").value=client.code+" "+client.name;drawClients(client.id);$("clientState").textContent="Selecionado: "+client.code+" • "+client.name}
+}
+function drawClients(keepId){
+ const q=normalizeClient($("clientSearch").value),tokens=q.split(/\s+/).filter(Boolean);
+ const matching=clients.filter(c=>tokens.every(t=>normalizeClient(c.code+" "+c.name).includes(t)));
+ const shown=matching.slice(0,100);
+ if(keepId&&!shown.some(c=>c.id===keepId)){const c=clients.find(c=>c.id===keepId);if(c)shown.unshift(c)}
+ $("clientSelect").replaceChildren(new Option("Selecione um cliente",""));
+ shown.forEach(c=>$("clientSelect").add(new Option(c.code+" • "+c.name,c.id)));
+ if(keepId)$("clientSelect").value=String(keepId);
+ $("clientState").textContent=matching.length?(matching.length>100?"Mostrando 100 de "+matching.length+". Digite o código ou nome para filtrar.":matching.length+" cliente(s) encontrado(s)."):"Nenhum cliente encontrado. Use Cadastrar cliente.";
+}
+async function loadClients(){
+ $("retryClients").classList.add("hidden");$("clientState").textContent="Carregando clientes…";
+ try{const r=await fetch(BASE+"/api/public/clients");if(!r.ok)throw Error();clients=await r.json();$("clientSearch").disabled=false;$("clientSelect").disabled=false;drawClients(selectedClient?.id)}
+ catch(e){$("clientState").textContent="Não foi possível carregar os clientes."; $("retryClients").classList.remove("hidden")}
+}
+$("retryClients").onclick=loadClients;
+$("clientSearch").oninput=()=>{chooseClient(null);drawClients()};
+$("clientSelect").onchange=()=>chooseClient(clients.find(c=>String(c.id)===$("clientSelect").value)||null);
+function closeClientForm(){$("newClientForm").classList.add("hidden");$("newClient").setAttribute("aria-expanded","false")}
+$("newClient").onclick=()=>{
+ if(!$("seller").value){error("Selecione seu vendedor antes de cadastrar o cliente.");$("seller").focus();return}
+ error("");clientMessage("");$("newClientForm").classList.remove("hidden");$("newClient").setAttribute("aria-expanded","true");$("newClientCode").focus();
+};
+$("cancelClient").onclick=()=>{closeClientForm();$("newClient").focus()};
+$("saveClient").onclick=async()=>{
+ if(clientSaving)return;clientMessage("");
+ const code=$("newClientCode").value.trim(),name=$("newClientName").value.trim(),seller=$("seller").value;
+ if(!seller){clientMessage("Selecione o vendedor.",true);return}
+ if(!code||!name){clientMessage("Informe o código e o nome do cliente.",true);(!code?$("newClientCode"):$("newClientName")).focus();return}
+ clientSaving=true;$("saveClient").disabled=true;$("cancelClient").disabled=true;$("send").disabled=true;$("saveClient").textContent="Salvando…";
+ try{
+ const r=await fetch(BASE+"/api/public/clients",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,name,seller_id:seller,website:$("website").value})});
+ const data=await r.json();if(!r.ok)throw Error(data.error||"Não foi possível cadastrar.");
+ const at=clients.findIndex(c=>c.id===data.client.id);if(at<0)clients.push(data.client);else clients[at]=data.client;
+ $("clientSearch").disabled=false;$("clientSelect").disabled=false;chooseClient(data.client);closeClientForm();
+ $("newClientCode").value="";$("newClientName").value="";
+ $("clientState").textContent=(data.existing?"Este código já estava cadastrado. Cliente selecionado: ":"Cliente cadastrado e selecionado: ")+data.client.code+" • "+data.client.name;
+ $("clientSelect").focus();
+ }catch(e){clientMessage(e.message||"Falha de conexão. Tente novamente.",true)}
+ finally{clientSaving=false;$("saveClient").disabled=false;$("cancelClient").disabled=false;$("send").disabled=!products.length;$("saveClient").textContent="Salvar cliente"}
+};
+const submitWithClient=$("requestForm").onsubmit;
+$("requestForm").onsubmit=e=>{
+ if(clientSaving||!selectedClient){e.preventDefault();error(clientSaving?"Aguarde o cadastro do cliente.":"Escolha um cliente cadastrado ou use Cadastrar cliente.");$("clientSelect").focus();return}
+ return submitWithClient(e);
+};
+const anotherWithClient=$("another").onclick;
+$("another").onclick=()=>{anotherWithClient();chooseClient(null);$("clientSearch").value="";drawClients();closeClientForm();clientMessage("");$("clientSearch").focus()};
+loadClients();
+
 </script></body></html>
