@@ -38,6 +38,10 @@ const BASE="https://tdbmosdmepkfzmcxucqi.supabase.co/functions/v1/somaforce-brin
 const $=id=>document.getElementById(id);
 let products=[],sellers=[],cart=[],limits={max_types:20,max_units:20000},submissionId=crypto.randomUUID(),sending=false;
 function error(message){$("error").textContent=message;$("error").classList.toggle("hidden",!message)}
+function productLabel(p){
+ const duplicate=products.some(x=>x.id!==p.id&&x.name===p.name);
+ return duplicate?p.name+(p.supplier?" — "+p.supplier:"")+" [#"+p.id+"]":p.name;
+}
 function drawProducts(){
  const old=$("product").value;
  $("product").replaceChildren(new Option("Selecione um brinde",""));
@@ -45,7 +49,7 @@ function drawProducts(){
  products.forEach(p=>{const category=p.category||"Sem categoria";if(!groups.has(category))groups.set(category,[]);groups.get(category).push(p)});
  [...groups].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR")).forEach(([category,items])=>{
  const group=document.createElement("optgroup");group.label=category;
- items.forEach(p=>group.append(new Option(p.name,p.id)));$("product").append(group)
+ items.forEach(p=>group.append(new Option(productLabel(p),p.id)));$("product").append(group)
  });
  $("product").value=old;
  $("catalogState").textContent=products.length?"Escolha os brindes, informe as quantidades e adicione à lista.":"Nenhum brinde disponível no momento.";
@@ -86,7 +90,7 @@ function addItem(){
  const existing=cart.find(i=>i.product_id===product.id);
  if(cart.reduce((n,i)=>n+i.qty,0)+qty>limits.max_units){error("Limite de "+limits.max_units+" unidades por pedido.");return false}
  if(existing){if(existing.qty+qty>1000){error("O limite é de 1000 unidades por brinde.");return false}existing.qty+=qty}
- else{if(cart.length>=limits.max_types){error("Limite de "+limits.max_types+" tipos de brinde por pedido.");return false}cart.push({product_id:product.id,name:product.name,qty})}
+ else{if(cart.length>=limits.max_types){error("Limite de "+limits.max_types+" tipos de brinde por pedido.");return false}cart.push({product_id:product.id,name:productLabel(product),qty})}
  drawProducts();$("product").value="";$("qty").value="1";drawCart();return true;
 }
 $("addItem").onclick=addItem;
