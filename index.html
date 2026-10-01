@@ -72,6 +72,7 @@ body{font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.
 .quoteNoteButton{white-space:nowrap}#mQuoteNote .box{max-width:680px}#quoteNoteText{white-space:pre-wrap;overflow-wrap:anywhere;max-height:55vh;overflow:auto;padding:16px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-size:14px;line-height:1.65}#quoteNoteContext{overflow-wrap:anywhere;margin-bottom:14px}#mQuoteReport{z-index:1100}#mQuoteReport .box{width:96vw;max-width:1400px}#mQuoteReport .toolbar h3{margin:0}.quoteReportFilters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);margin-bottom:16px}.quoteReportFilters label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}.quoteReportFilters select,.quoteReportFilters .field{width:100%;min-width:0}.quoteReportFilters .qrNotes{flex-direction:row;align-items:center}.qrDates{display:flex;gap:10px}.qrDates label{min-width:0;flex:1}#qrStats .card{padding:12px}#qrStats strong{font-size:21px}#qrContent .tablewrap{max-height:480px}#qrContent td{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:260px}#qrContent th{font-size:11px;white-space:nowrap}#qrError:empty{display:none}#qrError{color:var(--red)}#mQuoteNote{z-index:1700}@media(max-width:750px){.quoteReportFilters{grid-template-columns:1fr 1fr}#qrStats{grid-template-columns:1fr 1fr}}@media(max-width:450px){.quoteReportFilters{grid-template-columns:1fr}}@page quoteReportPage{size:A4 landscape;margin:12mm}@media print{body.quote-report-print .shell,body.quote-report-print .loginGate,body.quote-report-print .toast,body.quote-report-print .modal:not(#mQuoteReport){display:none!important}body.quote-report-print #mQuoteReport{display:block!important;position:static;inset:auto;padding:0;background:none;backdrop-filter:none;page:quoteReportPage}body.quote-report-print #mQuoteReport .box{width:100%;max-width:none;max-height:none;padding:0;overflow:visible;box-shadow:none}body.quote-report-print #mQuoteReport .noPrint,body.quote-report-print #mQuoteReport .toolbar{display:none!important}body.quote-report-print #mQuoteReport .printHeader{display:block!important}body.quote-report-print #qrContent .tablewrap{max-height:none;overflow:visible;border:0}body.quote-report-print #qrContent table{width:100%;font-size:9px}body.quote-report-print #qrContent td,body.quote-report-print #qrContent th{font-size:9px;padding:6px;white-space:pre-wrap}body.quote-report-print #qrContent thead{display:table-header-group}body.quote-report-print #qrContent th{position:static}body.quote-report-print #qrContent tr{break-inside:avoid}body.quote-report-print #qrStats{grid-template-columns:repeat(4,1fr)}body.quote-report-print #qrStats strong{font-size:17px}body.quote-report-print #qrScope{font-size:10px}}
 .systemLink{display:inline-flex;align-items:center;justify-content:center;color:var(--red);text-decoration:none;font-weight:600;white-space:nowrap}.systemLink:focus-visible{outline:2px solid var(--red);outline-offset:3px}
 .inSuite .systemLink{display:none!important}
+.inSuite .brand img,.inSuite .mobileLogo,.inSuite .loginBrand{display:none!important}.inSuite .brand{display:none!important}.inSuite #loginGate{display:none!important}
 </style>
 <script>if(window.self!==window.top)document.documentElement.classList.add("inSuite");</script>
 </head>
@@ -193,7 +194,10 @@ body{font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.
 <div id="mClearQuotes" class="modal" role="dialog" aria-modal="true" aria-labelledby="clearQuotesTitle"><div class="box" style="max-width:580px"><h3 id="clearQuotesTitle">Limpar todas as cotações</h3><p id="clearQuotesSummary" role="status"></p><p>Remove todas as cotações, inclusive arquivadas, aprovadas, compradas e recebidas, além dos registros de recebimento vinculados. Os filtros da tela não limitam esta limpeza.</p><p class="note">Brindes, estoque, fornecedores e movimentações de estoque serão mantidos. Será guardado um backup das cotações e das referências aos PDFs.</p><div class="fg"><label for="clearQuotesPhrase">Digite LIMPAR COTACOES para confirmar</label><input id="clearQuotesPhrase" class="field" autocomplete="off" placeholder="LIMPAR COTACOES"></div><p id="clearQuotesError" role="alert" style="color:#b12a35"></p><div class="foot"><button type="button" class="btn close">Cancelar</button><button id="clearQuotesSubmit" class="btn danger" disabled onclick="executeClearQuotes()">Limpar todas agora</button></div></div></div>
 <script>
 var BASE="https://tdbmosdmepkfzmcxucqi.supabase.co/functions/v1/somaforce-brindes";
-var accessToken=sessionStorage.getItem("somaforce_access_token")||"";
+var suiteOrigin="https://somaforce-patrimonial.cristianbsilva.chatgpt.site";
+var inSomaforceSuite=window.self!==window.top&&document.referrer.startsWith(suiteOrigin+"/");
+var suiteSessionReceived=false;
+var accessToken=inSomaforceSuite?"":(sessionStorage.getItem("somaforce_access_token")||"");
 var state={categories:[],products:[],movements:[],requests:[],sellers:[],clients:[],suppliers:[],quotes:[],allQuotes:[],dashboard:null};
 var $=function(s){return document.querySelector(s)}, $$=function(s){return Array.from(document.querySelectorAll(s))};
 var titles={dashboard:["Dashboard","Visão geral do inventário e das operações."],products:["Brindes / Estoque","Categorias, brindes e saldo atual."],entries:["Entradas","Recebimentos que aumentam o estoque."],exits:["Saídas","Entregas que reduzem o estoque."],adjust:["Ajustes / Devoluções","Correções e devoluções."],history:["Histórico geral","Todas as movimentações."],requests:["Solicitações","Pedidos antes da baixa."],reports:["Relatórios","Indicadores de consumo."],sellers:["Vendedores","Cadastro dos vendedores."],clients:["Clientes","Cadastro dos clientes."],suppliers:["Fornecedores","Contatos e cotações por fornecedor."],quotes:["Cotações","Compare fornecedores e aprove propostas."]};
@@ -526,6 +530,7 @@ $$(".tablewrap").forEach(function(wrap){var body=wrap.querySelector("tbody");if(
 applyView("dashboard");
 
 function showLogin(){
+ if(inSomaforceSuite){document.getElementById("appShell").classList.add("hidden");document.getElementById("loginGate").classList.add("hidden");if(suiteSessionReceived){suiteSessionReceived=false;window.parent.postMessage({type:"somaforce-suite-expired"},suiteOrigin)}return}
  document.getElementById("appShell").classList.add("hidden");
  document.getElementById("loginGate").classList.remove("hidden");
  document.getElementById("accessPassword").value="";
@@ -546,12 +551,24 @@ async function doLogin(){
  finally{btn.disabled=false;btn.textContent="Entrar"}
 }
 async function logoutApp(){
+ if(inSomaforceSuite){accessToken="";suiteSessionReceived=false;window.parent.postMessage({type:"somaforce-suite-logout"},suiteOrigin);document.getElementById("appShell").classList.add("hidden");return}
  accessToken="";sessionStorage.removeItem("somaforce_access_token");knownRequestIds=null;document.title="Somaforce • Brindes";
  showLogin();
 }
 document.getElementById("loginButton").onclick=doLogin;
 document.getElementById("accessPassword").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 (async()=>{
+ if(inSomaforceSuite){
+  showLogin();
+  window.addEventListener("message",async function(event){
+   if(event.origin!==suiteOrigin||event.source!==window.parent||event.data?.type!=="somaforce-suite-session"||typeof event.data.token!=="string")return;
+   var incoming=event.data.token;if(!incoming||incoming.length>2048||(suiteSessionReceived&&accessToken===incoming))return;
+   suiteSessionReceived=true;accessToken=incoming;
+   try{var check=await fetch(BASE+"/api/me",{headers:{Authorization:"Bearer "+incoming}});if(!check.ok)throw Error("Sessão expirada");if(accessToken!==incoming)return;showApp();await refresh();if(accessToken===incoming)window.parent.postMessage({type:"somaforce-suite-authenticated"},suiteOrigin)}catch(e){accessToken="";showLogin()}
+  });
+  window.parent.postMessage({type:"somaforce-suite-ready"},suiteOrigin);
+  return;
+ }
  try{
   if(!accessToken)throw new Error("unauthorized");
   const r=await fetch(BASE+"/api/me",{headers:{Authorization:"Bearer "+accessToken}});
