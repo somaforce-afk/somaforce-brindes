@@ -195,7 +195,9 @@ body{font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.
 <script>
 var BASE="https://tdbmosdmepkfzmcxucqi.supabase.co/functions/v1/somaforce-brindes";
 var suiteOrigin="https://somaforce-patrimonial.cristianbsilva.chatgpt.site";
-var inSomaforceSuite=window.self!==window.top&&document.referrer.startsWith(suiteOrigin+"/");
+var suiteAllowedOrigins=[suiteOrigin,"https://somaforce-patrimonial.abrdns.com"];
+var suiteParentOrigin=suiteOrigin;
+var inSomaforceSuite=window.self!==window.top&&(new URLSearchParams(location.search).get("suite")==="1"||document.referrer.startsWith(suiteOrigin+"/"));
 var suiteSessionReceived=false;
 var accessToken=inSomaforceSuite?"":(sessionStorage.getItem("somaforce_access_token")||"");
 var state={categories:[],products:[],movements:[],requests:[],sellers:[],clients:[],suppliers:[],quotes:[],allQuotes:[],dashboard:null};
@@ -530,7 +532,7 @@ $$(".tablewrap").forEach(function(wrap){var body=wrap.querySelector("tbody");if(
 applyView("dashboard");
 
 function showLogin(){
- if(inSomaforceSuite){document.getElementById("appShell").classList.add("hidden");document.getElementById("loginGate").classList.add("hidden");if(suiteSessionReceived){suiteSessionReceived=false;window.parent.postMessage({type:"somaforce-suite-expired"},suiteOrigin)}return}
+ if(inSomaforceSuite){document.getElementById("appShell").classList.add("hidden");document.getElementById("loginGate").classList.add("hidden");if(suiteSessionReceived){suiteSessionReceived=false;window.parent.postMessage({type:"somaforce-suite-expired"},suiteParentOrigin)}return}
  document.getElementById("appShell").classList.add("hidden");
  document.getElementById("loginGate").classList.remove("hidden");
  document.getElementById("accessPassword").value="";
@@ -551,7 +553,7 @@ async function doLogin(){
  finally{btn.disabled=false;btn.textContent="Entrar"}
 }
 async function logoutApp(){
- if(inSomaforceSuite){accessToken="";suiteSessionReceived=false;window.parent.postMessage({type:"somaforce-suite-logout"},suiteOrigin);document.getElementById("appShell").classList.add("hidden");return}
+ if(inSomaforceSuite){accessToken="";suiteSessionReceived=false;window.parent.postMessage({type:"somaforce-suite-logout"},suiteParentOrigin);document.getElementById("appShell").classList.add("hidden");return}
  accessToken="";sessionStorage.removeItem("somaforce_access_token");knownRequestIds=null;document.title="Somaforce • Brindes";
  showLogin();
 }
@@ -561,12 +563,12 @@ document.getElementById("accessPassword").addEventListener("keydown",e=>{if(e.ke
  if(inSomaforceSuite){
   showLogin();
   window.addEventListener("message",async function(event){
-   if(event.origin!==suiteOrigin||event.source!==window.parent||event.data?.type!=="somaforce-suite-session"||typeof event.data.token!=="string")return;
-   var incoming=event.data.token;if(!incoming||incoming.length>2048||(suiteSessionReceived&&accessToken===incoming))return;
+   if(!suiteAllowedOrigins.includes(event.origin)||event.source!==window.parent||event.data?.type!=="somaforce-suite-session"||typeof event.data.token!=="string")return;
+   suiteParentOrigin=event.origin;var incoming=event.data.token;if(!incoming||incoming.length>2048||(suiteSessionReceived&&accessToken===incoming))return;
    suiteSessionReceived=true;accessToken=incoming;
-   try{var check=await fetch(BASE+"/api/me",{headers:{Authorization:"Bearer "+incoming}});if(!check.ok)throw Error("Sessão expirada");if(accessToken!==incoming)return;showApp();await refresh();if(accessToken===incoming)window.parent.postMessage({type:"somaforce-suite-authenticated"},suiteOrigin)}catch(e){accessToken="";showLogin()}
+   try{var check=await fetch(BASE+"/api/me",{headers:{Authorization:"Bearer "+incoming}});if(!check.ok)throw Error("Sessão expirada");if(accessToken!==incoming)return;showApp();await refresh();if(accessToken===incoming)window.parent.postMessage({type:"somaforce-suite-authenticated"},suiteParentOrigin)}catch(e){accessToken="";showLogin()}
   });
-  window.parent.postMessage({type:"somaforce-suite-ready"},suiteOrigin);
+  window.parent.postMessage({type:"somaforce-suite-ready"},"*");
   return;
  }
  try{
